@@ -35,7 +35,7 @@ RUN touch /var/log/cron.log && chmod 0666 /var/log/cron.log
 RUN crontab /etc/cron.d/app-cron
 
 # Создаем скрипт для запуска cron и приложения
-RUN echo '#!/bin/sh\nservice cron start\npython fetch_coordinates.py\ntail -f /var/log/cron.log' > /app/start.sh
+RUN echo '#!/bin/sh\nservice cron start\npython fetch_coordinates.py\nwhile true; do sleep 60; done' > /app/start.sh
 RUN chmod +x /app/start.sh
 
 # Запускаем скрипт при старте контейнера
