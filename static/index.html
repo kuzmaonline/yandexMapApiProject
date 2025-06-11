@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Карта объектов</title>
+  <script src="https://api-maps.yandex.ru/2.1/?apikey=655d3945-f450-4e60-939c-14d7cb2b9645&lang=ru_RU"></script>
+  <script>
+    const timestamp = new Date().getTime();
+    const dataScript = document.createElement('script');
+    dataScript.src = `data/coordinates.js?v=${timestamp}`;
+    dataScript.onload = () => {
+      ymaps.ready(init);
+    };
+    document.head.appendChild(dataScript);
+  </script>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 10px;
+      z-index: 1000;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="statusFilter">Фильтр по статусу:</label>
+    <select id="statusFilter">
+      <option value="all">Все</option>
+      <option value="142">Статус 142</option>
+      <option value="143">Статус 143</option>
+      <option value="other">Остальные</option>
+    </select>
+    <br><br>
+    <label for="searchInput">Поиск по названию сделки:</label>
+    <input type="text" id="searchInput" placeholder="Введите текст для поиска">
+  </div>
+  <div id="map"></div>
+  <script>
+    let map;
+    function init() {
+      map = new ymaps.Map("map", {
+        center: [55.751244, 37.618423],
+        zoom: 10
+      });
+
+      renderMarkers('all');
+
+      document.getElementById('statusFilter').addEventListener('change', function() {
+        const selectedStatus = this.value;
+        renderMarkers(selectedStatus);
+      });
+
+      document.getElementById('searchInput').addEventListener('input', function() {
+        const selectedStatus = document.getElementById('statusFilter').value;
+        renderMarkers(selectedStatus);
+      });
+    }
+
+    function renderMarkers(filter) {
+      map.geoObjects.removeAll();
+      const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+      coordinates.forEach(function(point) {
+        let isVisible = false;
+        if (filter === 'all') {
+          isVisible = true;
+        } else if (filter === 'other') {
+          isVisible = (point.status !== '142' && point.status !== '143');
+        } else {
+          isVisible = (point.status === filter);
+        }
+
+        if (isVisible && searchText !== '' && !point.name.toLowerCase().includes(searchText)) {
+          isVisible = false;
+        }
+
+        if (isVisible) {
+          let preset = 'islands#blueStretchyIcon';
+          if (point.status === '143') preset = 'islands#grayStretchyIcon';
+          else if (point.status === '142') preset = 'islands#greenStretchyIcon';
+
+          let balloon = point.link && point.link !== '#' 
+            ? `<a href="${point.link}" target="_blank">${point.name}</a>` 
+            : point.name;
+
+          const placemark = new ymaps.Placemark(point.coords, {
+            balloonContent: balloon,
+            iconContent: point.company
+          }, {
+            preset: preset
+          });
+          map.geoObjects.add(placemark);
+        }
+      });
+    }
+  </script>
+</body>
+</html> 
