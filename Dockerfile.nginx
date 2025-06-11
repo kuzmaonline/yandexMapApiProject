@@ -3,5 +3,10 @@ FROM nginx:alpine
 # Копируем конфигурацию nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Создаем директорию для статических файлов
-RUN mkdir -p /usr/share/nginx/html 
+# Создаем директорию для статических файлов и устанавливаем права
+RUN mkdir -p /usr/share/nginx/html && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
+
+# Переключаемся на пользователя nginx
+USER nginx 
