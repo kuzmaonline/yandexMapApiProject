@@ -7,8 +7,10 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./static:/app/static
-    env_file:
-      - .env
+    environment:
+      - YANDEX_API_KEY=${YANDEX_API_KEY}
+      - UPDATE_INTERVAL=${UPDATE_INTERVAL}
+      - LOG_LEVEL=${LOG_LEVEL}
     restart: unless-stopped
     # Добавляем healthcheck для проверки работоспособности
     healthcheck:
