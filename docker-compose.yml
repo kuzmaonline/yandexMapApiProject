@@ -27,5 +27,8 @@ services:
       - "9980:80"
     volumes:
       - ./static:/usr/share/nginx/html:ro
-    user: nginx
-    restart: unless-stopped 
+      - nginx_cache:/var/cache/nginx
+    restart: unless-stopped
+
+volumes:
+  nginx_cache: 
