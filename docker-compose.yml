@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile.nginx
     ports:
-      - "80:80"
+      - "9980:80"
     volumes:
       - ./static:/usr/share/nginx/html:ro
       - nginx_cache:/var/cache/nginx
