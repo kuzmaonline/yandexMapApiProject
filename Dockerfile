@@ -28,8 +28,8 @@ COPY crontab /etc/cron.d/app-cron
 # Устанавливаем права на crontab файл
 RUN chmod 0644 /etc/cron.d/app-cron
 
-# Создаем лог-файл для cron
-RUN touch /app/logs/cron.log
+# Создаем лог-файл для cron и устанавливаем права
+RUN touch /app/logs/cron.log && chmod 0666 /app/logs/cron.log
 
 # Применяем crontab
 RUN crontab /etc/cron.d/app-cron
