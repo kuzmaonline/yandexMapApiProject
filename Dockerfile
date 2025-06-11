@@ -29,13 +29,13 @@ COPY crontab /etc/cron.d/app-cron
 RUN chmod 0644 /etc/cron.d/app-cron
 
 # Создаем лог-файл для cron и устанавливаем права
-RUN touch /app/logs/cron.log && chmod 0666 /app/logs/cron.log
+RUN touch /var/log/cron.log && chmod 0666 /var/log/cron.log
 
 # Применяем crontab
 RUN crontab /etc/cron.d/app-cron
 
 # Создаем скрипт для запуска cron и приложения
-RUN echo '#!/bin/sh\nservice cron start\npython fetch_coordinates.py\ntail -f /app/logs/cron.log' > /app/start.sh
+RUN echo '#!/bin/sh\nservice cron start\npython fetch_coordinates.py\ntail -f /var/log/cron.log' > /app/start.sh
 RUN chmod +x /app/start.sh
 
 # Запускаем скрипт при старте контейнера
