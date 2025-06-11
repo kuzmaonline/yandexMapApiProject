@@ -3,20 +3,16 @@ version: '3.8'
 services:
   # Сервис для запуска Python-скрипта
   python-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ./logs:/app/logs
       - ./static:/app/static
     environment:
       - SPREADSHEET_ID=${SPREADSHEET_ID}
       - API_KEY=${API_KEY}
-    restart: unless-stopped
-    # Добавляем healthcheck для проверки работоспособности
-    healthcheck:
-      test: ["CMD", "pgrep", "cron"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    restart: always
 
   # Nginx для раздачи статических файлов
   nginx:
@@ -24,11 +20,13 @@ services:
       context: .
       dockerfile: Dockerfile.nginx
     ports:
-      - "9980:80"
+      - "80:80"
     volumes:
       - ./static:/usr/share/nginx/html:ro
       - nginx_cache:/var/cache/nginx
-    restart: unless-stopped
+    depends_on:
+      - python-app
+    restart: always
 
 volumes:
   nginx_cache: 
