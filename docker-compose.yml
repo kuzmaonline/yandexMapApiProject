@@ -22,7 +22,6 @@ services:
     ports:
       - "9980:80"
     volumes:
-      - ./static:/usr/share/nginx/html:ro
       - nginx_cache:/var/cache/nginx
     depends_on:
       - python-app
