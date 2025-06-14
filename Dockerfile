@@ -4,8 +4,10 @@ FROM python:3.9-slim
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Устанавливаем cron
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+# Устанавливаем cron и необходимые пакеты
+RUN apt-get update && \
+    apt-get install -y cron rsyslog && \
+    rm -rf /var/lib/apt/lists/*
 
 # Копируем файлы зависимостей
 COPY requirements.txt .
@@ -28,14 +30,23 @@ COPY crontab /etc/cron.d/app-cron
 # Устанавливаем права на crontab файл
 RUN chmod 0644 /etc/cron.d/app-cron
 
-# Создаем лог-файл для cron
-RUN touch /app/logs/cron.log
+# Создаем лог-файл для cron и устанавливаем права
+RUN touch /var/log/cron.log && chmod 0666 /var/log/cron.log
 
 # Применяем crontab
 RUN crontab /etc/cron.d/app-cron
 
 # Создаем скрипт для запуска cron и приложения
-RUN echo '#!/bin/sh\nservice cron start\npython fetch_coordinates.py\ntail -f /app/logs/cron.log' > /app/start.sh
+RUN echo '#!/bin/sh\n\
+# Запускаем rsyslog\n\
+service rsyslog start\n\
+# Запускаем cron в фоновом режиме\n\
+service cron start\n\
+# Запускаем скрипт сразу при старте\n\
+python /app/fetch_coordinates.py\n\
+# Держим контейнер запущенным и следим за логами\n\
+tail -f /var/log/cron.log /var/log/syslog' > /app/start.sh
+
 RUN chmod +x /app/start.sh
 
 # Запускаем скрипт при старте контейнера
