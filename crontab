@@ -1,4 +1,4 @@
 # Запуск скрипта каждые 5 минут
-*/5 * * * * root cd /app && /usr/local/bin/python /app/fetch_coordinates.py >> /var/log/cron.log 2>&1
+*/5 * * * * cd /app && /usr/local/bin/python /app/fetch_coordinates.py >> /var/log/cron.log 2>&1
 
 # Пустая строка в конце файла обязательна 
