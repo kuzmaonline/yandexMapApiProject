@@ -23,6 +23,7 @@
             z-index: 1000;
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            width: 300px;
         }
         #map {
             width: 100%;
@@ -39,11 +40,52 @@
             width: 100%;
             padding: 5px;
             margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .search-group {
+            display: flex;
+            gap: 5px;
+        }
+        .search-group input {
+            flex: 1;
+        }
+        .search-group button {
+            padding: 5px 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .search-group button:hover {
+            background: #45a049;
+        }
+        #searchResults {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .search-result-item {
+            padding: 5px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .search-result-item:hover {
+            background: #f5f5f5;
         }
     </style>
 </head>
 <body>
     <div id="controls">
+        <div class="control-group">
+            <label for="addressSearch">Поиск адреса:</label>
+            <div class="search-group">
+                <input type="text" id="addressSearch" placeholder="Введите адрес">
+                <button onclick="searchAddress()">Найти</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
         <div class="control-group">
             <label for="statusFilter">Фильтр по статусу:</label>
             <select id="statusFilter">
@@ -64,19 +106,54 @@
         const dataScript = document.createElement('script');
         dataScript.src = `data/coordinates.js?v=${timestamp}`;
         dataScript.onload = () => {
-            ymaps.ready(init);
+            ymaps.ready(initMap);
         };
         document.head.appendChild(dataScript);
 
         let map;
-        function init() {
-            map = new ymaps.Map("map", {
-                center: [55.751244, 37.618423],
-                zoom: 10
+        let searchControl;
+
+        function initMap() {
+            map = new ymaps.Map('map', {
+                center: [55.7522, 37.6156], // Москва (широта, долгота)
+                zoom: 10,
+                controls: ['zoomControl', 'fullscreenControl']
             });
 
-            renderMarkers('all');
+            // Добавляем поиск по карте
+            const searchControl = new ymaps.control.SearchControl({
+                options: {
+                    provider: 'yandex#search'
+                }
+            });
+            map.controls.add(searchControl);
 
+            // Загружаем данные и отрисовываем маркеры
+            fetch('data/coordinates.json')
+                .then(response => response.json())
+                .then(data => {
+                    window.markersData = data;
+                    renderMarkers();
+                })
+                .catch(error => console.error('Ошибка загрузки данных:', error));
+
+            // Добавляем обработчики Enter для полей поиска
+            document.getElementById('addressSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Предотвращаем стандартное поведение
+                    searchAddress();
+                }
+            });
+
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Предотвращаем стандартное поведение
+                    const selectedStatus = document.getElementById('statusFilter').value;
+                    renderMarkers(selectedStatus);
+                }
+            });
+
+            // Добавляем обработчики изменения фильтров
             document.getElementById('statusFilter').addEventListener('change', function() {
                 const selectedStatus = this.value;
                 renderMarkers(selectedStatus);
@@ -85,6 +162,69 @@
             document.getElementById('searchInput').addEventListener('input', function() {
                 const selectedStatus = document.getElementById('statusFilter').value;
                 renderMarkers(selectedStatus);
+            });
+        }
+
+        function searchAddress() {
+            const address = document.getElementById('addressSearch').value;
+            if (!address) return;
+
+            // Удаляем предыдущую метку поиска, если она есть
+            if (window.searchPlacemark) {
+                map.geoObjects.remove(window.searchPlacemark);
+            }
+
+            ymaps.geocode(address, {
+                results: 5
+            }).then(function(res) {
+                const searchResults = document.getElementById('searchResults');
+                searchResults.innerHTML = '';
+                searchResults.style.display = 'block';
+
+                const geoObjects = res.geoObjects;
+                if (geoObjects.getLength() === 0) {
+                    searchResults.innerHTML = '<div class="search-result-item">Адрес не найден</div>';
+                    return;
+                }
+
+                geoObjects.each(function(geoObject) {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'search-result-item';
+                    resultItem.textContent = geoObject.getAddressLine();
+                    resultItem.onclick = function() {
+                        const coordinates = geoObject.geometry.getCoordinates();
+                        const address = geoObject.getAddressLine();
+                        
+                        // Создаем новую метку
+                        window.searchPlacemark = new ymaps.Placemark(coordinates, {
+                            balloonContent: `
+                                <div style="padding: 5px;">
+                                    <div style="margin-bottom: 5px;">${address}</div>
+                                    <a href="https://yandex.ru/maps/213/moscow/?ll=${coordinates[1]},${coordinates[0]}&pt=${coordinates[1]},${coordinates[0]}&z=15&mode=search&text=${encodeURIComponent(address)}" 
+                                       target="_blank" 
+                                       style="color: #2a5885; text-decoration: none; font-size: 13px;">
+                                        Открыть в Яндекс Картах →
+                                    </a>
+                                </div>
+                            `,
+                            iconContent: 'Поиск'
+                        }, {
+                            preset: 'islands#redDotIcon',
+                            balloonCloseButton: true,
+                            hideIconOnBalloonOpen: false
+                        });
+
+                        // Добавляем метку на карту
+                        map.geoObjects.add(window.searchPlacemark);
+                        
+                        // Центрируем карту и открываем балун
+                        map.setCenter(coordinates, 15);
+                        window.searchPlacemark.balloon.open();
+                        
+                        searchResults.style.display = 'none';
+                    };
+                    searchResults.appendChild(resultItem);
+                });
             });
         }
 
