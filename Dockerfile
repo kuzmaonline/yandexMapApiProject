@@ -47,6 +47,7 @@ python /app/fetch_coordinates.py\n\
 # Держим контейнер запущенным и следим за логами\n\
 tail -f /var/log/cron.log /var/log/syslog' > /app/start.sh
 
+
 RUN chmod +x /app/start.sh
 
 # Запускаем скрипт при старте контейнера
