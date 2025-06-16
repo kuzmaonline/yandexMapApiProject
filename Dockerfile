@@ -29,4 +29,4 @@ python /app/fetch_coordinates.py\n\
 tail -f /var/log/cron.log /var/log/syslog' > /app/start.sh && \
     chmod +x /app/start.sh
 
-CMD ["/app/start.sh"]
+CMD ["/app/start.sh"] 

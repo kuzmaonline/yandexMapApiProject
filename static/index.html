@@ -89,7 +89,7 @@
         <div class="control-group">
             <label for="statusFilter">Фильтр по статусу:</label>
             <select id="statusFilter">
-                <option value="all">Все</option>
+                <option value="all" selected>Все</option>
                 <option value="142">Статус 142</option>
                 <option value="143">Статус 143</option>
                 <option value="other">Остальные</option>
@@ -106,6 +106,8 @@
         const dataScript = document.createElement('script');
         dataScript.src = `data/coordinates.js?v=${timestamp}`;
         dataScript.onload = () => {
+            console.log('Coordinates loaded:', window.coordinates);
+            window.markersData = window.coordinates;
             ymaps.ready(initMap);
         };
         document.head.appendChild(dataScript);
@@ -129,13 +131,12 @@
             map.controls.add(searchControl);
 
             // Загружаем данные и отрисовываем маркеры
-            fetch('data/coordinates.json')
-                .then(response => response.json())
-                .then(data => {
-                    window.markersData = data;
-                    renderMarkers();
-                })
-                .catch(error => console.error('Ошибка загрузки данных:', error));
+            if (window.markersData) {
+                console.log('Rendering markers with data:', window.markersData);
+                renderMarkers('all');
+            } else {
+                console.error('No markers data available');
+            }
 
             // Добавляем обработчики Enter для полей поиска
             document.getElementById('addressSearch').addEventListener('keypress', function(e) {
@@ -232,7 +233,7 @@
             map.geoObjects.removeAll();
             const searchText = document.getElementById('searchInput').value.toLowerCase();
 
-            coordinates.forEach(function(point) {
+            window.markersData.forEach(function(point) {
                 let isVisible = false;
                 if (filter === 'all') {
                     isVisible = true;
