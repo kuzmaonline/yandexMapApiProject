@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логи обновления координат</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 24px 32px;
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 2em;
+        }
+        .log-viewer {
+            background: #222;
+            color: #e0e0e0;
+            font-family: 'Fira Mono', 'Consolas', monospace;
+            font-size: 14px;
+            border-radius: 6px;
+            padding: 16px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .controls {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #388e3c;
+        }
+        .back-link {
+            color: #2a5885;
+            text-decoration: none;
+            font-size: 15px;
+            margin-left: 10px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Логи обновления координат</h1>
+        <div class="controls">
+            <button class="btn" onclick="loadLog()">Обновить</button>
+            <a href="index.html" class="back-link">← На главную</a>
+        </div>
+        <div id="log" class="log-viewer">Загрузка...</div>
+    </div>
+    <script>
+    function loadLog() {
+        fetch('/logs/fetch_coordinates.log')
+            .then(r => r.text())
+            .then(text => {
+                // Показываем только последние 500 строк
+                const lines = text.split('\n');
+                const lastLines = lines.slice(-500).join('\n');
+                document.getElementById('log').textContent = lastLines || 'Лог пуст.';
+            })
+            .catch(() => {
+                document.getElementById('log').textContent = 'Ошибка загрузки лога.';
+            });
+    }
+    loadLog();
+    </script>
+</body>
+</html> 
