@@ -11,6 +11,9 @@ services:
       - SPREADSHEET_ID=${SPREADSHEET_ID}
       - API_KEY=${API_KEY}
     restart: always
+    ports:
+      - "5003:5003"
+    command: python fetch_coordinates.py --flask
     
 
   # Nginx для раздачи статических файлов

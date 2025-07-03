@@ -69,11 +69,11 @@
 <body>
     <div class="container">
         <h1>Логи обновления координат</h1>
-        <div class="controls">
-            <button class="btn" onclick="loadLog()">Обновить</button>
-            <a href="index.html" class="back-link">← На главную</a>
-        </div>
-        <div id="log" class="log-viewer">Загрузка...</div>
+        <button id="run-script-btn" style="margin-bottom:15px;">🔄 Обновить координаты вручную</button>
+        <div id="run-status" style="margin-bottom:15px;color:#2a5885;"></div>
+        <button id="refresh-btn">Обновить</button>
+        <a href="index.html" style="margin-left:20px;">← На главную</a>
+        <pre id="logContent">Загрузка...</pre>
     </div>
     <script>
     function loadLog() {
@@ -83,12 +83,64 @@
                 // Показываем только последние 500 строк
                 const lines = text.split('\n');
                 const lastLines = lines.slice(-500).join('\n');
-                document.getElementById('log').textContent = lastLines || 'Лог пуст.';
+                document.getElementById('logContent').textContent = lastLines || 'Лог пуст.';
             })
             .catch(() => {
-                document.getElementById('log').textContent = 'Ошибка загрузки лога.';
+                document.getElementById('logContent').textContent = 'Ошибка загрузки лога.';
             });
     }
+
+    const runBtn = document.getElementById('run-script-btn');
+    const runStatus = document.getElementById('run-status');
+    let runStatusTimer = null;
+
+    runBtn.onclick = async function() {
+        runBtn.disabled = true;
+        runStatus.textContent = 'Запуск обновления...';
+        try {
+            const resp = await fetch('/run-coords', {method: 'POST'});
+            if (resp.status === 202) {
+                runStatus.textContent = 'Скрипт запущен. Ожидайте завершения...';
+                pollRunStatus();
+            } else if (resp.status === 409) {
+                runStatus.textContent = 'Скрипт уже выполняется.';
+                pollRunStatus();
+            } else {
+                runStatus.textContent = 'Ошибка запуска: ' + resp.status;
+                runBtn.disabled = false;
+            }
+        } catch (e) {
+            runStatus.textContent = 'Ошибка запроса: ' + e;
+            runBtn.disabled = false;
+        }
+    };
+
+    async function pollRunStatus() {
+        if (runStatusTimer) clearTimeout(runStatusTimer);
+        try {
+            const resp = await fetch('/run-coords-status');
+            const data = await resp.json();
+            if (data.running) {
+                runStatus.textContent = 'Скрипт выполняется...';
+                runBtn.disabled = true;
+                runStatusTimer = setTimeout(pollRunStatus, 2000);
+            } else if (data.error) {
+                runStatus.textContent = 'Ошибка: ' + data.error;
+                runBtn.disabled = false;
+            } else if (data.last) {
+                runStatus.textContent = 'Готово! Последний запуск: ' + data.last;
+                runBtn.disabled = false;
+            } else {
+                runStatus.textContent = '';
+                runBtn.disabled = false;
+            }
+        } catch (e) {
+            runStatus.textContent = 'Ошибка статуса: ' + e;
+            runBtn.disabled = false;
+        }
+    }
+
+    document.getElementById('refresh-btn').onclick = loadLog;
     loadLog();
     </script>
 </body>
