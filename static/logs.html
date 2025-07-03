@@ -77,10 +77,10 @@
     </div>
     <script>
     function loadLog() {
-        fetch('/logs/fetch_coordinates.log')
+        const url = '/logs/fetch_coordinates.log?v=' + Date.now();
+        fetch(url)
             .then(r => r.text())
             .then(text => {
-                // Показываем только последние 500 строк
                 const lines = text.split('\n');
                 const lastLines = lines.slice(-500).join('\n');
                 document.getElementById('logContent').textContent = lastLines || 'Лог пуст.';
