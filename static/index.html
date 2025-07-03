@@ -107,7 +107,7 @@
     <script>
         const timestamp = new Date().getTime();
         const dataScript = document.createElement('script');
-        dataScript.src = `data/coordinates.js?v=${timestamp}`;
+        dataScript.src = `static/data/coordinates.js?v=${timestamp}`;
         dataScript.onload = () => {
             console.log('Coordinates loaded:', window.coordinates);
             window.markersData = window.coordinates;

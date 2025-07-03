@@ -23,6 +23,7 @@ services:
     volumes:
       - nginx_cache:/var/cache/nginx
       - ./logs:/usr/share/nginx/html/logs
+      - ./static:/usr/share/nginx/html/static
     depends_on:
       - python-app
     restart: always
