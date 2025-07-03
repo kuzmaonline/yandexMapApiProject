@@ -1,114 +1,274 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Карта объектов</title>
-  <script src="https://api-maps.yandex.ru/2.1/?apikey=655d3945-f450-4e60-939c-14d7cb2b9645&lang=ru_RU"></script>
-  <script>
-    const timestamp = new Date().getTime();
-    const dataScript = document.createElement('script');
-    dataScript.src = `data/coordinates.js?v=${timestamp}`;
-    dataScript.onload = () => {
-      ymaps.ready(init);
-    };
-    document.head.appendChild(dataScript);
-  </script>
-  <style>
-    html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
-    #controls {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 10px;
-      z-index: 1000;
-      border-radius: 5px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта объектов</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=655d3945-f450-4e60-939c-14d7cb2b9645&lang=ru_RU"></script>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            z-index: 1000;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            width: 300px;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        select, input {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .search-group {
+            display: flex;
+            gap: 5px;
+        }
+        .search-group input {
+            flex: 1;
+        }
+        .search-group button {
+            padding: 5px 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .search-group button:hover {
+            background: #45a049;
+        }
+        #searchResults {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .search-result-item {
+            padding: 5px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .search-result-item:hover {
+            background: #f5f5f5;
+        }
+    </style>
 </head>
 <body>
-  <div id="controls">
-    <label for="statusFilter">Фильтр по статусу:</label>
-    <select id="statusFilter">
-      <option value="all">Все</option>
-      <option value="142">Статус 142</option>
-      <option value="143">Статус 143</option>
-      <option value="other">Остальные</option>
-    </select>
-    <br><br>
-    <label for="searchInput">Поиск по названию сделки:</label>
-    <input type="text" id="searchInput" placeholder="Введите текст для поиска">
-  </div>
-  <div id="map"></div>
-  <script>
-    let map;
-    function init() {
-      map = new ymaps.Map("map", {
-        center: [55.751244, 37.618423],
-        zoom: 10
-      });
+    <div id="controls">
+        <div class="control-group">
+            <a href="logs.html" style="color:#2a5885;font-size:15px;text-decoration:none;">📝 Смотреть логи обновления</a>
+        </div>
+        <div class="control-group">
+            <label for="addressSearch">Поиск адреса:</label>
+            <div class="search-group">
+                <input type="text" id="addressSearch" placeholder="Введите адрес">
+                <button onclick="searchAddress()">Найти</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+        <div class="control-group">
+            <label for="statusFilter">Фильтр по статусу:</label>
+            <select id="statusFilter">
+                <option value="all" selected>Все</option>
+                <option value="142">Статус 142</option>
+                <option value="143">Статус 143</option>
+                <option value="other">Остальные</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="searchInput">Поиск по названию:</label>
+            <input type="text" id="searchInput" placeholder="Введите текст для поиска">
+        </div>
+    </div>
+    <div id="map"></div>
+    <script>
+        const timestamp = new Date().getTime();
+        const dataScript = document.createElement('script');
+        dataScript.src = `static/data/coordinates.js?v=${timestamp}`;
+        dataScript.onload = () => {
+            console.log('Coordinates loaded:', window.coordinates);
+            window.markersData = window.coordinates;
+            ymaps.ready(initMap);
+        };
+        document.head.appendChild(dataScript);
 
-      renderMarkers('all');
+        let map;
+        let searchControl;
 
-      document.getElementById('statusFilter').addEventListener('change', function() {
-        const selectedStatus = this.value;
-        renderMarkers(selectedStatus);
-      });
+        function initMap() {
+            map = new ymaps.Map('map', {
+                center: [55.7522, 37.6156], // Москва (широта, долгота)
+                zoom: 10,
+                controls: ['zoomControl', 'fullscreenControl']
+            });
 
-      document.getElementById('searchInput').addEventListener('input', function() {
-        const selectedStatus = document.getElementById('statusFilter').value;
-        renderMarkers(selectedStatus);
-      });
-    }
+            // Добавляем поиск по карте
+            const searchControl = new ymaps.control.SearchControl({
+                options: {
+                    provider: 'yandex#search'
+                }
+            });
+            map.controls.add(searchControl);
 
-    function renderMarkers(filter) {
-      map.geoObjects.removeAll();
-      const searchText = document.getElementById('searchInput').value.toLowerCase();
+            // Загружаем данные и отрисовываем маркеры
+            if (window.markersData) {
+                console.log('Rendering markers with data:', window.markersData);
+                renderMarkers('all');
+            } else {
+                console.error('No markers data available');
+            }
 
-      coordinates.forEach(function(point) {
-        let isVisible = false;
-        if (filter === 'all') {
-          isVisible = true;
-        } else if (filter === 'other') {
-          isVisible = (point.status !== '142' && point.status !== '143');
-        } else {
-          isVisible = (point.status === filter);
+            // Добавляем обработчики Enter для полей поиска
+            document.getElementById('addressSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Предотвращаем стандартное поведение
+                    searchAddress();
+                }
+            });
+
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Предотвращаем стандартное поведение
+                    const selectedStatus = document.getElementById('statusFilter').value;
+                    renderMarkers(selectedStatus);
+                }
+            });
+
+            // Добавляем обработчики изменения фильтров
+            document.getElementById('statusFilter').addEventListener('change', function() {
+                const selectedStatus = this.value;
+                renderMarkers(selectedStatus);
+            });
+
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const selectedStatus = document.getElementById('statusFilter').value;
+                renderMarkers(selectedStatus);
+            });
         }
 
-        if (isVisible && searchText !== '' && !point.name.toLowerCase().includes(searchText)) {
-          isVisible = false;
+        function searchAddress() {
+            const address = document.getElementById('addressSearch').value;
+            if (!address) return;
+
+            // Удаляем предыдущую метку поиска, если она есть
+            if (window.searchPlacemark) {
+                map.geoObjects.remove(window.searchPlacemark);
+            }
+
+            ymaps.geocode(address, {
+                results: 5
+            }).then(function(res) {
+                const searchResults = document.getElementById('searchResults');
+                searchResults.innerHTML = '';
+                searchResults.style.display = 'block';
+
+                const geoObjects = res.geoObjects;
+                if (geoObjects.getLength() === 0) {
+                    searchResults.innerHTML = '<div class="search-result-item">Адрес не найден</div>';
+                    return;
+                }
+
+                geoObjects.each(function(geoObject) {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'search-result-item';
+                    resultItem.textContent = geoObject.getAddressLine();
+                    resultItem.onclick = function() {
+                        const coordinates = geoObject.geometry.getCoordinates();
+                        const address = geoObject.getAddressLine();
+                        
+                        // Создаем новую метку
+                        window.searchPlacemark = new ymaps.Placemark(coordinates, {
+                            balloonContent: `
+                                <div style="padding: 5px;">
+                                    <div style="margin-bottom: 5px;">${address}</div>
+                                    <a href="https://yandex.ru/maps/213/moscow/?ll=${coordinates[1]},${coordinates[0]}&pt=${coordinates[1]},${coordinates[0]}&z=15&mode=search&text=${encodeURIComponent(address)}" 
+                                       target="_blank" 
+                                       style="color: #2a5885; text-decoration: none; font-size: 13px;">
+                                        Открыть в Яндекс Картах →
+                                    </a>
+                                </div>
+                            `,
+                            iconContent: 'Поиск'
+                        }, {
+                            preset: 'islands#redDotIcon',
+                            balloonCloseButton: true,
+                            hideIconOnBalloonOpen: false
+                        });
+
+                        // Добавляем метку на карту
+                        map.geoObjects.add(window.searchPlacemark);
+                        
+                        // Центрируем карту и открываем балун
+                        map.setCenter(coordinates, 15);
+                        window.searchPlacemark.balloon.open();
+                        
+                        searchResults.style.display = 'none';
+                    };
+                    searchResults.appendChild(resultItem);
+                });
+            });
         }
 
-        if (isVisible) {
-          let preset = 'islands#blueStretchyIcon';
-          if (point.status === '143') preset = 'islands#grayStretchyIcon';
-          else if (point.status === '142') preset = 'islands#greenStretchyIcon';
+        function renderMarkers(filter) {
+            map.geoObjects.removeAll();
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
 
-          let balloon = point.link && point.link !== '#' 
-            ? `<a href="${point.link}" target="_blank">${point.name}</a>` 
-            : point.name;
+            window.markersData.forEach(function(point) {
+                let isVisible = false;
+                if (filter === 'all') {
+                    isVisible = true;
+                } else if (filter === 'other') {
+                    isVisible = (point.status !== '142' && point.status !== '143');
+                } else {
+                    isVisible = (point.status === filter);
+                }
 
-          const placemark = new ymaps.Placemark(point.coords, {
-            balloonContent: balloon,
-            iconContent: point.company
-          }, {
-            preset: preset
-          });
-          map.geoObjects.add(placemark);
+                if (isVisible && searchText !== '' && !point.name.toLowerCase().includes(searchText)) {
+                    isVisible = false;
+                }
+
+                if (isVisible) {
+                    let preset = 'islands#blueStretchyIcon';
+                    if (point.status === '143') preset = 'islands#grayStretchyIcon';
+                    else if (point.status === '142') preset = 'islands#greenStretchyIcon';
+
+                    let balloon = point.link && point.link !== '#' 
+                        ? `<a href="${point.link}" target="_blank">${point.name}</a>` 
+                        : point.name;
+
+                    const placemark = new ymaps.Placemark(point.coords, {
+                        balloonContent: balloon,
+                        iconContent: point.company
+                    }, {
+                        preset: preset
+                    });
+                    map.geoObjects.add(placemark);
+                }
+            });
         }
-      });
-    }
-  </script>
+    </script>
 </body>
 </html> 

@@ -1,30 +1,35 @@
-version: '3.8'
-
 services:
   # Сервис для запуска Python-скрипта
   python-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ./logs:/app/logs
       - ./static:/app/static
-    env_file:
-      - .env
-    restart: unless-stopped
-    # Добавляем healthcheck для проверки работоспособности
-    healthcheck:
-      test: ["CMD", "pgrep", "cron"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    environment:
+      - SPREADSHEET_ID=${SPREADSHEET_ID}
+      - API_KEY=${API_KEY}
+    restart: always
+    ports:
+      - "5003:5003"
+    command: python fetch_coordinates.py --flask
+    
 
   # Nginx для раздачи статических файлов
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
     ports:
-      - "80:80"
+      - "9980:80"
     volumes:
-      - ./static:/usr/share/nginx/html
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - nginx_cache:/var/cache/nginx
+      - ./logs:/usr/share/nginx/html/logs
+      - ./static:/usr/share/nginx/html/static
     depends_on:
       - python-app
-    restart: unless-stopped 
+    restart: always
+
+volumes:
+  nginx_cache: 
