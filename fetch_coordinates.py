@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 from typing import List, Dict, Any
+import argparse
 
 from config import (
     SPREADSHEET_ID, RANGE_NAME, API_KEY,
@@ -128,4 +129,42 @@ def main():
     save_coordinates(coordinates)
 
 if __name__ == "__main__":
-    main() 
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--flask', action='store_true', help='Run Flask server for manual update')
+    args = parser.parse_args()
+
+    if args.flask:
+        from flask import Flask, jsonify
+        import threading
+        from datetime import datetime
+        app = Flask(__name__)
+        update_lock = threading.Lock()
+        update_status = {'running': False, 'last': None, 'error': None}
+
+        def run_update():
+            with update_lock:
+                update_status['running'] = True
+                update_status['error'] = None
+                try:
+                    main()  # основной процесс обновления координат
+                    update_status['last'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                except Exception as e:
+                    update_status['error'] = str(e)
+                finally:
+                    update_status['running'] = False
+
+        @app.route('/run-coords', methods=['POST'])
+        def run_coords():
+            if update_status['running']:
+                return jsonify({'status': 'already_running'}), 409
+            threading.Thread(target=run_update).start()
+            return jsonify({'status': 'started'}), 202
+
+        @app.route('/run-coords-status', methods=['GET'])
+        def run_coords_status():
+            return jsonify(update_status)
+
+        app.run(host='0.0.0.0', port=5003)
+    else:
+        main() 
